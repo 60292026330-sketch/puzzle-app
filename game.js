@@ -112,27 +112,55 @@ const STAGES = [
     })()
   },
 
-  // ---- Stage 4: 縦タワー3本 ＋ 障害物 ----
+  // ---- Stage 4: 縦タワー3本 ＋ 階段土台 ＋ 障害物 ----
   // 【必要な打ち角度：高め（上に向けて打つ）】
-  // 縦1列タワーを3本並べる。上から落としたボールがタワーを横に倒し穴へ転がる。
-  // 低弾道は横板2枚でブロック手前を完全封鎖。
+  // 各タワーを穴方向へ下っていく階段土台の上に置く。
+  // 倒れたブロックが階段を転がり穴に入りやすい。
+  // 低弾道は横板2枚で封鎖。
   {
     label: 'ステージ 4',
     hint:  '上に向けて高く打て！低い弾道は塞がれている！',
-    obstacles: [
-      // 地面すれすれの低弾道を塞ぐ横板①（ブロック左側・低め）
-      { x: 300, y: GROUND_Y - 55,  w: 150, h: 16, color: OBS_COLOR },
+    obstacles: (() => {
+      const obs = [];
+      // 低弾道を塞ぐ横板①（ブロック左側・低め）
+      obs.push({ x: 300, y: GROUND_Y - 55,  w: 150, h: 16, color: OBS_COLOR });
       // 低弾道を塞ぐ横板②（少し右・少し高め）
-      { x: 400, y: GROUND_Y - 105, w: 130, h: 16, color: OBS_COLOR },
-    ],
+      obs.push({ x: 400, y: GROUND_Y - 105, w: 130, h: 16, color: OBS_COLOR });
+
+      // 階段土台（穴方向へ右に行くほど低くなる）
+      // 各土台の上面Y（地面からの高さ）: 左=120px, 中=70px, 右=20px
+      const steps = [
+        { cx: 510, topH: 120 },  // 左タワー土台
+        { cx: 590, topH:  70 },  // 中タワー土台
+        { cx: 670, topH:  20 },  // 右タワー土台（ほぼ地面）
+      ];
+      steps.forEach(({ cx, topH }) => {
+        const tw = BW + 16;          // 土台幅（ブロックより少し広め）
+        const th = topH;             // 土台の厚さ = 地面からの高さ（地面まで続く柱）
+        obs.push({
+          x: cx,
+          y: GROUND_Y - th / 2,      // 土台の中心Y
+          w: tw,
+          h: th,
+          color: OBS_COLOR2
+        });
+      });
+      return obs;
+    })(),
     layout: (() => {
       const list = [];
-      // 縦1列タワーを3本（高さ6段）：上から落ちたボールで横倒しになりやすい
-      [510, 590, 670].forEach(tx => {
+      // 各タワーの土台上面から積み上げ
+      const steps = [
+        { cx: 510, topH: 120 },
+        { cx: 590, topH:  70 },
+        { cx: 670, topH:  20 },
+      ];
+      steps.forEach(({ cx, topH }) => {
+        const baseY = GROUND_Y - topH; // 土台上面のY座標
         for (let row = 0; row < 6; row++) {
           list.push({
-            x: tx,
-            y: GROUND_Y - BH/2 - row*(BH+2)
+            x: cx,
+            y: baseY - BH/2 - row*(BH+2)
           });
         }
       });
