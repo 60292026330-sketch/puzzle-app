@@ -143,30 +143,32 @@ const STAGES = [
     })()
   },
 
-  // ---- Stage 5: 高層ビル ＋ 障害物（ブロック左側の弾道上に配置）----
+  // ---- Stage 5: 安定3タワー ＋ 障害物（ブロック左側の弾道上に配置）----
   {
     label: 'ステージ 5',
-    hint:  '高層ビルを倒せ！障害物に注意！',
-    // ブロック群は x=480〜720 付近。障害物はその左（x=300〜430）に置く
+    hint:  '3本のタワーを倒せ！障害物に注意！',
+    // 障害物はブロック群（x=470〜）の左側（x=300〜420）に配置
     obstacles: [
       // 横長の木の板（低め）
       { x: 330, y: GROUND_Y - 120, w: 120, h: 16, color: OBS_COLOR2 },
       // 縦長の木の板（中段）
-      { x: 400, y: GROUND_Y - 230, w: 16,  h: 60, color: OBS_COLOR2 },
+      { x: 410, y: GROUND_Y - 230, w: 16,  h: 60, color: OBS_COLOR2 },
       // 横長の鉄板（高め）
       { x: 330, y: GROUND_Y - 320, w: 120, h: 16, color: OBS_COLOR  },
     ],
     layout: (() => {
       const list = [];
-      // 3本の高層タワー（各8段）
-      [490, 590, 690].forEach(tx => {
-        for (let row = 0; row < 8; row++) {
-          list.push({ x: tx, y: GROUND_Y - BH/2 - row*(BH+2) });
+      // 幅2×高さ6の安定タワーを3本（間隔を広めにとる）
+      // タワー左端x: 470, 570, 670 → 各タワーは col=0,1 の2列
+      [470, 570, 670].forEach(tx => {
+        for (let row = 0; row < 6; row++) {
+          for (let col = 0; col < 2; col++) {
+            list.push({
+              x: tx + col * (BW + 2) + BW / 2,
+              y: GROUND_Y - BH / 2 - row * (BH + 2)
+            });
+          }
         }
-      });
-      // 各タワー間を繋ぐ横ブロック（3・6段目）
-      [[490,3],[490,6],[590,3],[590,6]].forEach(([tx, row]) => {
-        list.push({ x: tx + (BW+2)/2, y: GROUND_Y - BH/2 - row*(BH+2) });
       });
       return list;
     })()
@@ -176,38 +178,67 @@ const STAGES = [
   {
     label: 'ステージ 6',
     hint:  '最終決戦！全力で崩せ！',
-    // ブロック群は x=430〜 / 障害物は x=250〜400 に配置
+    // 全ブロックを x=460〜740 に収める。障害物は x=260〜420 に配置
     obstacles: [
       // 横長の鉄板（低段）
-      { x: 280, y: GROUND_Y -  90, w: 120, h: 16, color: OBS_COLOR  },
+      { x: 290, y: GROUND_Y -  90, w: 120, h: 16, color: OBS_COLOR  },
       // 縦長の木の板（低段・右寄り）
-      { x: 385, y: GROUND_Y - 165, w: 16,  h: 60, color: OBS_COLOR2 },
+      { x: 405, y: GROUND_Y - 165, w: 16,  h: 60, color: OBS_COLOR2 },
       // 横長の木の板（中段）
       { x: 300, y: GROUND_Y - 230, w: 120, h: 16, color: OBS_COLOR2 },
       // 縦長の鉄板（中段・右寄り）
-      { x: 390, y: GROUND_Y - 310, w: 16,  h: 60, color: OBS_COLOR  },
+      { x: 410, y: GROUND_Y - 310, w: 16,  h: 60, color: OBS_COLOR  },
       // 横長の鉄板（高段）
-      { x: 270, y: GROUND_Y - 360, w: 120, h: 16, color: OBS_COLOR  },
+      { x: 270, y: GROUND_Y - 370, w: 120, h: 16, color: OBS_COLOR  },
     ],
     layout: (() => {
       const list = [];
-      const base = 430;
-      // 底面7個
-      for (let c = 0; c < 7; c++)
-        list.push({ x: base + c*(BW+2) + BW/2, y: GROUND_Y - BH/2 });
-      // その上5個
-      for (let c = 0; c < 5; c++)
-        list.push({ x: base + (BW+2) + c*(BW+2) + BW/2, y: GROUND_Y - BH/2 - (BH+2) });
-      // その上3個
-      for (let c = 0; c < 3; c++)
-        list.push({ x: base + 2*(BW+2) + c*(BW+2) + BW/2, y: GROUND_Y - BH/2 - 2*(BH+2) });
-      // 頂点
-      list.push({ x: base + 3*(BW+2) + BW/2, y: GROUND_Y - BH/2 - 3*(BH+2) });
-      // 左右の独立タワー（4段）
-      [355, 720].forEach(tx => {
-        for (let row = 0; row < 4; row++)
-          list.push({ x: tx, y: GROUND_Y - BH/2 - row*(BH+2) });
+
+      // ---- 中央の大ピラミッド（底面9個→7→5→3→1、計25個）----
+      // 底面左端を x=460 に設定
+      // 底面9個の幅 = 9*(BW+2) = 414px → 右端中心 = 460 + 8*(BW+2) + BW/2 = 460+368+22 = 850…はみ出す
+      // SAFE_X_MAX=778 に収まるよう底面を7個に抑える（幅=7*(44+2)=322px）
+      // 底面左端 x=460、右端中心 = 460+6*(46)+22 = 758 ✓
+      const base = 460;
+      const pyramid = [7, 5, 3, 1];  // 各段のブロック数（底→頂）
+      pyramid.forEach((count, row) => {
+        const rowLeft = base + ((7 - count) / 2) * (BW + 2);
+        for (let c = 0; c < count; c++) {
+          list.push({
+            x: rowLeft + c * (BW + 2) + BW / 2,
+            y: GROUND_Y - BH / 2 - row * (BH + 2)
+          });
+        }
       });
+
+      // ---- 中央塔（ピラミッド頂上からさらに4段）----
+      const topX = base + 3 * (BW + 2) + BW / 2;  // ピラミッド中央X
+      for (let row = 4; row <= 7; row++) {
+        list.push({ x: topX, y: GROUND_Y - BH / 2 - row * (BH + 2) });
+      }
+
+      // ---- 左右の安定タワー（幅2×4段）----
+      // 左タワー：base - 3*(BW+2) = 460 - 138 = 322 → 右端中心 = 322 + (BW+2) + BW/2 = 322+46+22=390 ✓
+      // 右タワー：base + 9*(BW+2) = 460 + 414 = 874…はみ出す → base + 7*(BW+2)+10 = 460+322+10=792 > 778
+      // 右タワーは base + 6*(BW+2) = 460+276=736 → 右端中心=736+46+22=804 > 778
+      // → 右タワー左端 x = 736、右端中心 = 736+22=758 ✓（1列のみ）
+      // 左タワー（2列×4段）
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 2; col++) {
+          list.push({
+            x: 490 - 3*(BW+2) + col*(BW+2) + BW/2,
+            y: GROUND_Y - BH/2 - row*(BH+2)
+          });
+        }
+      }
+      // 右タワー（1列×4段）※SAFE_X_MAX以内に収める
+      for (let row = 0; row < 4; row++) {
+        list.push({
+          x: base + 6*(BW+2) + BW/2,   // = 460+276+22 = 758
+          y: GROUND_Y - BH/2 - row*(BH+2)
+        });
+      }
+
       return list;
     })()
   }
