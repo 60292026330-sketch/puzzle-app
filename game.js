@@ -112,64 +112,68 @@ const STAGES = [
     })()
   },
 
-  // ---- Stage 4: 千鳥配置 ＋ 障害物 ----
+  // ---- Stage 4: 縦タワー3本 ＋ 障害物 ----
   // 【必要な打ち角度：高め（上に向けて打つ）】
-  // 低位置に横板を2枚重ねて地面すれすれの弾道を完全封鎖。
-  // 高い放物線を描いて上から落とすルートだけが通れる。
+  // 縦1列タワーを3本並べる。上から落としたボールがタワーを横に倒し穴へ転がる。
+  // 低弾道は横板2枚でブロック手前を完全封鎖。
   {
     label: 'ステージ 4',
     hint:  '上に向けて高く打て！低い弾道は塞がれている！',
     obstacles: [
-      // 地面すれすれの低弾道を塞ぐ横板（左側・低め）
-      { x: 290, y: GROUND_Y - 55,  w: 140, h: 16, color: OBS_COLOR  },
-      // その少し右・少し高め（低弾道ルートをさらに塞ぐ）
-      { x: 380, y: GROUND_Y - 100, w: 140, h: 16, color: OBS_COLOR  },
-      // 中段をさらに塞ぐ縦板（右側）
-      { x: 428, y: GROUND_Y - 200, w: 16,  h: 60, color: OBS_COLOR2 },
+      // 地面すれすれの低弾道を塞ぐ横板①（ブロック左側・低め）
+      { x: 300, y: GROUND_Y - 55,  w: 150, h: 16, color: OBS_COLOR },
+      // 低弾道を塞ぐ横板②（少し右・少し高め）
+      { x: 400, y: GROUND_Y - 105, w: 130, h: 16, color: OBS_COLOR },
     ],
     layout: (() => {
       const list = [];
-      const startX = 450;
-      const cols = 7;
-      const rows = 4;
-      for (let col = 0; col < cols; col++) {
-        for (let row = 0; row < rows; row++) {
-          const offset = (col % 2 === 0) ? 0 : BH + 2;
+      // 縦1列タワーを3本（高さ6段）：上から落ちたボールで横倒しになりやすい
+      [510, 590, 670].forEach(tx => {
+        for (let row = 0; row < 6; row++) {
           list.push({
-            x: startX + col*(BW+2) + BW/2,
-            y: GROUND_Y - BH/2 - row*(BH+2) - offset
+            x: tx,
+            y: GROUND_Y - BH/2 - row*(BH+2)
           });
         }
-      }
+      });
       return list;
     })()
   },
 
-  // ---- Stage 5: 安定3タワー ＋ 障害物 ----
+  // ---- Stage 5: 安定3タワー ＋ 障害物（横板を土台にしてブロックを積む）----
   // 【必要な打ち角度：中程度（斜め45°前後）】
-  // 低弾道は地面近くの横板で塞ぎ、高弾道は上の横板で塞ぐ。
-  // 中程度の角度だけ両板の間の隙間（高さ約150px）を通れる。
+  // 低弾道横板・高弾道横板は空中に浮かせたまま。
+  // さらにブロック群を「地面より高い土台（横板）の上」に乗せ、
+  // 低弾道ではブロック下の土台に弾かれてブロックに届かない。
   {
     label: 'ステージ 5',
     hint:  '中くらいの角度で狙え！上も下も塞がれている！',
     obstacles: [
       // 低弾道を塞ぐ横板（低め・左側）
       { x: 300, y: GROUND_Y - 65,  w: 130, h: 16, color: OBS_COLOR  },
-      // 低弾道を塞ぐ横板（低め・右側）※隙間なく繋ぐ
+      // 低弾道を塞ぐ縦板（低め・右側）
       { x: 420, y: GROUND_Y - 65,  w: 16,  h: 60, color: OBS_COLOR  },
       // 高弾道を塞ぐ横板（高め・左側）
       { x: 290, y: GROUND_Y - 310, w: 130, h: 16, color: OBS_COLOR2 },
       // 高弾道を塞ぐ縦板（高め・右側）
       { x: 415, y: GROUND_Y - 280, w: 16,  h: 60, color: OBS_COLOR2 },
+      // ブロックの土台となる横板①（地面より50px上・左タワー下）
+      { x: 502, y: GROUND_Y - 50,  w: 96,  h: 16, color: OBS_COLOR2 },
+      // ブロックの土台となる横板②（中タワー下）
+      { x: 602, y: GROUND_Y - 50,  w: 96,  h: 16, color: OBS_COLOR2 },
+      // ブロックの土台となる横板③（右タワー下）
+      { x: 702, y: GROUND_Y - 50,  w: 96,  h: 16, color: OBS_COLOR2 },
     ],
     layout: (() => {
       const list = [];
+      // 土台の上（y = GROUND_Y - 50 - 8 - BH/2 = GROUND_Y - 72）からタワーを積む
+      const baseY = GROUND_Y - 50 - 8; // 土台上面のy
       [480, 580, 680].forEach(tx => {
         for (let row = 0; row < 6; row++) {
           for (let col = 0; col < 2; col++) {
             list.push({
               x: tx + col * (BW + 2) + BW / 2,
-              y: GROUND_Y - BH / 2 - row * (BH + 2)
+              y: baseY - BH/2 - row*(BH+2)
             });
           }
         }
@@ -387,6 +391,9 @@ function spawnBall() {
     label:'ball', isStatic:true, restitution:0.4, friction:0.1, density:0.12
   });
   currentBall._fired = false;
+  // 速度・角速度を確実にゼロにしてから追加
+  Body.setVelocity(currentBall, { x: 0, y: 0 });
+  Body.setAngularVelocity(currentBall, 0);
   World.add(world, currentBall);
 }
 
@@ -397,6 +404,9 @@ function fireBall(fromX, fromY, toX, toY) {
   const dist = Math.hypot(dx, dy);
   if (dist < 5) return;
   const cd = Math.min(dist, MAX_DRAG);
+
+  // 発射前にスリング中心へ位置を強制リセット（ずれ防止）
+  Body.setPosition(currentBall, { x: SLING_X, y: SLING_Y });
   Body.setStatic(currentBall, false);
   Body.setVelocity(currentBall, {
     x: (dx/dist)*cd * BALL_FORCE_SCALE*60,
@@ -548,7 +558,9 @@ gameCanvas.addEventListener('mouseup', e => {
 gameCanvas.addEventListener('mouseleave', () => {
   if (isDragging && currentBall) {
     isDragging = false; aimCtx.clearRect(0,0,W,H);
+    // スリング中心に強制リセット
     Body.setPosition(currentBall, { x:SLING_X, y:SLING_Y });
+    Body.setVelocity(currentBall, { x:0, y:0 });
     dragStart = null;
   }
 });
