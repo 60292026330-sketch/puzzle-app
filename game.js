@@ -17,9 +17,13 @@ const BALL_FORCE_SCALE = 0.007;
 const BW               = 44;
 const BH               = 28;
 
-// 穴は画面右端に配置（地面右側セグメントなし）
+// 穴は画面右端に配置
 const HOLE_W    = 100;
-const HOLE_LEFT = W - HOLE_W;   // 穴の左端
+const HOLE_LEFT = W - HOLE_W;  // = 800
+
+// ブロックを穴の上に置かないための安全X上限
+// ブロック中心が HOLE_LEFT - BW/2 より左にあれば穴にかからない
+const SAFE_X_MAX = HOLE_LEFT - BW / 2 - 4;  // = 778
 
 // ---- カラーパレット ----
 const BLOCK_COLORS = [
@@ -28,15 +32,23 @@ const BLOCK_COLORS = [
   '#00bcd4','#ff5722'
 ];
 
+// ---- 障害物カラー ----
+const OBS_COLOR  = '#607d8b';  // 鉄板（青みがかった灰色）
+const OBS_COLOR2 = '#8d6e63';  // 木の板（茶色）
+
 // ===== ステージ定義 =====
-// 各ブロックの座標は「HOLE_LEFT からの相対 x」「地面からの相対 y（負=上）」
+// layout : ブロックの絶対座標配列 { x, y }
+// obstacles : 静的障害物の絶対座標・サイズ配列 { x, y, w, h, color? }
 const STAGES = [
+
+  // ---- Stage 1: ピラミッド（5段）----
   {
     label: 'ステージ 1',
     hint:  'ピラミッドを崩せ！',
-    layout: (function() {
+    obstacles: [],
+    layout: (() => {
       const list = [];
-      const cx = HOLE_LEFT - 160;
+      const cx = 590;
       [[5,0],[4,1],[3,2],[2,3],[1,4]].forEach(([n, row]) => {
         for (let c = 0; c < n; c++) {
           list.push({
@@ -46,47 +58,158 @@ const STAGES = [
         }
       });
       return list;
-    }())
+    })()
   },
+
+  // ---- Stage 2: 二本タワー（6段×2）----
   {
     label: 'ステージ 2',
     hint:  '二本のタワーを倒せ！',
-    layout: (function() {
+    obstacles: [],
+    layout: (() => {
       const list = [];
-      [-280, -160].forEach(ox => {
+      [480, 620].forEach(tx => {
         for (let row = 0; row < 6; row++) {
           for (let col = 0; col < 2; col++) {
             list.push({
-              x: HOLE_LEFT + ox + col*(BW+4) + BW/2,
+              x: tx + col*(BW+4) + BW/2,
               y: GROUND_Y - BH/2 - row*(BH+2)
             });
           }
         }
       });
       return list;
-    }())
+    })()
   },
+
+  // ---- Stage 3: 城壁（穴にかからないよう左寄せ）----
   {
     label: 'ステージ 3',
     hint:  '城壁を破壊せよ！',
-    layout: (function() {
+    obstacles: [],
+    layout: (() => {
       const list = [];
-      const base = HOLE_LEFT - 340;
+      // base を十分左に設定：8ブロック幅 = 8*(44+2)=368px
+      // 右端ブロック中心 = base + 7*(BW+2) + BW/2 = base + 344
+      // これが SAFE_X_MAX(778) 以下になるよう: base <= 778-344 = 434
+      const base = 400;
       // 土台 8個
       for (let c = 0; c < 8; c++)
         list.push({ x: base + c*(BW+2) + BW/2, y: GROUND_Y - BH/2 });
-      // 両端の壁
-      [[0,1],[1,1],[6,1],[7,1],[0,2],[1,2],[6,2],[7,2],[0,3],[7,3]].forEach(([c,row]) =>
+      // 両端の壁 (col 0,1 と col 6,7)
+      [[0,1],[1,1],[6,1],[7,1],
+       [0,2],[1,2],[6,2],[7,2],
+       [0,3],[7,3]].forEach(([c, row]) =>
         list.push({ x: base + c*(BW+2) + BW/2, y: GROUND_Y - BH/2 - row*(BH+2) })
       );
-      // 中央の塔
+      // 中央の塔 (col 3,4)
       for (let row = 1; row <= 4; row++) {
         [3,4].forEach(c =>
           list.push({ x: base + c*(BW+2) + BW/2, y: GROUND_Y - BH/2 - row*(BH+2) })
         );
       }
       return list;
-    }())
+    })()
+  },
+
+  // ---- Stage 4: 千鳥配置 ＋ 障害物（ブロック左側の弾道上に配置）----
+  {
+    label: 'ステージ 4',
+    hint:  '障害物をかわして崩せ！',
+    // 障害物はブロック群（startX=440~）の左側・弾道上に配置
+    // 横長: w=120, h=16 / 縦長: w=16, h=60
+    obstacles: [
+      // 横長の鉄板（地面から高さ100付近・ブロック左側）
+      { x: 340, y: GROUND_Y - 100, w: 120, h: 16, color: OBS_COLOR },
+      // 縦長の鉄板（地面から高さ180付近・弾道の高いルートを塞ぐ）
+      { x: 395, y: GROUND_Y - 220, w: 16,  h: 60, color: OBS_COLOR },
+    ],
+    layout: (() => {
+      const list = [];
+      // 千鳥（市松）配置：偶数列は1段上げる
+      const startX = 440;
+      const cols = 7;
+      const rows = 4;
+      for (let col = 0; col < cols; col++) {
+        for (let row = 0; row < rows; row++) {
+          const offset = (col % 2 === 0) ? 0 : BH + 2;
+          list.push({
+            x: startX + col*(BW+2) + BW/2,
+            y: GROUND_Y - BH/2 - row*(BH+2) - offset
+          });
+        }
+      }
+      return list;
+    })()
+  },
+
+  // ---- Stage 5: 高層ビル ＋ 障害物（ブロック左側の弾道上に配置）----
+  {
+    label: 'ステージ 5',
+    hint:  '高層ビルを倒せ！障害物に注意！',
+    // ブロック群は x=480〜720 付近。障害物はその左（x=300〜430）に置く
+    obstacles: [
+      // 横長の木の板（低め）
+      { x: 330, y: GROUND_Y - 120, w: 120, h: 16, color: OBS_COLOR2 },
+      // 縦長の木の板（中段）
+      { x: 400, y: GROUND_Y - 230, w: 16,  h: 60, color: OBS_COLOR2 },
+      // 横長の鉄板（高め）
+      { x: 330, y: GROUND_Y - 320, w: 120, h: 16, color: OBS_COLOR  },
+    ],
+    layout: (() => {
+      const list = [];
+      // 3本の高層タワー（各8段）
+      [490, 590, 690].forEach(tx => {
+        for (let row = 0; row < 8; row++) {
+          list.push({ x: tx, y: GROUND_Y - BH/2 - row*(BH+2) });
+        }
+      });
+      // 各タワー間を繋ぐ横ブロック（3・6段目）
+      [[490,3],[490,6],[590,3],[590,6]].forEach(([tx, row]) => {
+        list.push({ x: tx + (BW+2)/2, y: GROUND_Y - BH/2 - row*(BH+2) });
+      });
+      return list;
+    })()
+  },
+
+  // ---- Stage 6: 最終決戦 ＋ 多数の障害物（ブロック左側に集中配置）----
+  {
+    label: 'ステージ 6',
+    hint:  '最終決戦！全力で崩せ！',
+    // ブロック群は x=430〜 / 障害物は x=250〜400 に配置
+    obstacles: [
+      // 横長の鉄板（低段）
+      { x: 280, y: GROUND_Y -  90, w: 120, h: 16, color: OBS_COLOR  },
+      // 縦長の木の板（低段・右寄り）
+      { x: 385, y: GROUND_Y - 165, w: 16,  h: 60, color: OBS_COLOR2 },
+      // 横長の木の板（中段）
+      { x: 300, y: GROUND_Y - 230, w: 120, h: 16, color: OBS_COLOR2 },
+      // 縦長の鉄板（中段・右寄り）
+      { x: 390, y: GROUND_Y - 310, w: 16,  h: 60, color: OBS_COLOR  },
+      // 横長の鉄板（高段）
+      { x: 270, y: GROUND_Y - 360, w: 120, h: 16, color: OBS_COLOR  },
+    ],
+    layout: (() => {
+      const list = [];
+      const base = 430;
+      // 底面7個
+      for (let c = 0; c < 7; c++)
+        list.push({ x: base + c*(BW+2) + BW/2, y: GROUND_Y - BH/2 });
+      // その上5個
+      for (let c = 0; c < 5; c++)
+        list.push({ x: base + (BW+2) + c*(BW+2) + BW/2, y: GROUND_Y - BH/2 - (BH+2) });
+      // その上3個
+      for (let c = 0; c < 3; c++)
+        list.push({ x: base + 2*(BW+2) + c*(BW+2) + BW/2, y: GROUND_Y - BH/2 - 2*(BH+2) });
+      // 頂点
+      list.push({ x: base + 3*(BW+2) + BW/2, y: GROUND_Y - BH/2 - 3*(BH+2) });
+      // 左右の独立タワー（4段）
+      [355, 720].forEach(tx => {
+        for (let row = 0; row < 4; row++)
+          list.push({ x: tx, y: GROUND_Y - BH/2 - row*(BH+2) });
+      });
+      return list;
+    })()
   }
 ];
 
@@ -120,7 +243,6 @@ function playHitSound(speed) {
   gOsc.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
   osc.connect(gOsc); gOsc.connect(audioCtx.destination);
   osc.start(); osc.stop(audioCtx.currentTime + 0.2);
-
   const nLen = audioCtx.sampleRate * 0.08;
   const nBuf = audioCtx.createBuffer(1, nLen, audioCtx.sampleRate);
   const nd = nBuf.getChannelData(0);
@@ -149,6 +271,7 @@ let currentBall  = null;
 let ballFired    = false;
 let firedBalls   = [];
 let blocks       = [];
+let obstacles    = [];   // 障害物ボディ（描画用に保持）
 
 // ---- Matter.js エンジン ----
 const engine = Engine.create({ gravity: { x: 0, y: 1.5 } });
@@ -170,7 +293,7 @@ document.getElementById('game-container').style.height = H + 'px';
 function initWorld() {
   World.clear(world);
   Engine.clear(engine);
-  blocks = []; firedBalls = [];
+  blocks = []; firedBalls = []; obstacles = [];
   currentBall = null; ballFired = false;
   isDragging  = false; dragStart = null;
   ballsUsed = 0; score = 0; blocksInHole = 0; gameOver = false;
@@ -179,15 +302,32 @@ function initWorld() {
   World.add(world, [
     Bodies.rectangle(HOLE_LEFT/2, GROUND_Y+15, HOLE_LEFT, 30,
       { isStatic:true, label:'ground', friction:0.6 }),
-    // 左壁・右壁・天井
-    Bodies.rectangle(-15,    H/2, 30, H*2, { isStatic:true, label:'wall' }),
-    Bodies.rectangle(W+15,   H/2, 30, H*2, { isStatic:true, label:'wall' }),
-    Bodies.rectangle(W/2,    -15, W+100, 30, { isStatic:true, label:'ceiling' }),
+    Bodies.rectangle(-15,   H/2, 30, H*2, { isStatic:true, label:'wall' }),
+    Bodies.rectangle(W+15,  H/2, 30, H*2, { isStatic:true, label:'wall' }),
+    Bodies.rectangle(W/2,  -15, W+100, 30, { isStatic:true, label:'ceiling' }),
   ]);
 
-  // ブロック配置
-  STAGES[currentStage].layout.forEach((def, i) => {
-    const block = Bodies.rectangle(def.x, def.y, BW, BH, {
+  const stage = STAGES[currentStage];
+
+  // 障害物配置
+  stage.obstacles.forEach(def => {
+    const obs = Bodies.rectangle(def.x, def.y, def.w, def.h, {
+      isStatic: true,
+      label: 'obstacle',
+      friction: 0.3,
+      restitution: 0.2,
+    });
+    obs._color = def.color || OBS_COLOR;
+    obs._w = def.w;
+    obs._h = def.h;
+    obstacles.push(obs);
+    World.add(world, obs);
+  });
+
+  // ブロック配置（穴の上に乗らないようにクランプ）
+  stage.layout.forEach((def, i) => {
+    const safeX = Math.min(def.x, SAFE_X_MAX);
+    const block = Bodies.rectangle(safeX, def.y, BW, BH, {
       label:'block', restitution:0.3, friction:0.5, density:0.003
     });
     block._colorIndex = i % BLOCK_COLORS.length;
@@ -195,6 +335,7 @@ function initWorld() {
     blocks.push(block);
     World.add(world, block);
   });
+
   totalBlocks = blocks.length;
   document.getElementById('block-display').textContent = totalBlocks;
 
@@ -202,12 +343,13 @@ function initWorld() {
   updateUI();
   hideMessage();
 
-  // 衝突音
+  // 衝突音（ボール×ブロック・障害物）
   Events.on(engine, 'collisionStart', (ev) => {
     ev.pairs.forEach(({ bodyA, bodyB }) => {
-      const isBall  = bodyA.label==='ball'  || bodyB.label==='ball';
-      const isBlock = bodyA.label==='block' || bodyB.label==='block';
-      if (isBall && isBlock) {
+      const isBall = bodyA.label==='ball' || bodyB.label==='ball';
+      const isHit  = bodyA.label==='block' || bodyB.label==='block'
+                  || bodyA.label==='obstacle' || bodyB.label==='obstacle';
+      if (isBall && isHit) {
         const ball = bodyA.label==='ball' ? bodyA : bodyB;
         playHitSound(Math.hypot(ball.velocity.x, ball.velocity.y));
       }
@@ -245,7 +387,6 @@ function fireBall(fromX, fromY, toX, toY) {
   ballsUsed++;
   updateUI();
 
-  // 2秒後：発射したボールを消去してから次ボールを出す
   setTimeout(() => {
     if (gameOver) return;
     World.remove(world, fired);
@@ -261,13 +402,12 @@ function fireBall(fromX, fromY, toX, toY) {
   }, 2000);
 }
 
-// ===== 判定（毎フレーム）=====
+// ===== 穴判定・画面外除去（毎フレーム）=====
 function checkHole() {
   blocks.forEach(block => {
     if (block._inHole) return;
     const { x, y } = block.position;
 
-    // 穴に入った（x が HOLE_LEFT より右 かつ 地面レベル）
     if (x > HOLE_LEFT && y >= GROUND_Y - BH/2) {
       block._inHole = true;
       blocksInHole++;
@@ -283,7 +423,6 @@ function checkHole() {
       return;
     }
 
-    // 画面下に落ちたブロックを除去（穴以外の場所から落下）
     if (y > H + 60) {
       block._inHole = true;
       World.remove(world, block);
@@ -362,7 +501,6 @@ gameCanvas.addEventListener('mousedown', e => {
     isDragging = true; dragStart = { x:SLING_X, y:SLING_Y };
   }
 });
-
 gameCanvas.addEventListener('mousemove', e => {
   if (!isDragging || !currentBall) return;
   const rect = gameCanvas.getBoundingClientRect();
@@ -375,7 +513,6 @@ gameCanvas.addEventListener('mousemove', e => {
   Body.setPosition(currentBall, { x:cx, y:cy });
   drawAimLine(cx, cy);
 });
-
 gameCanvas.addEventListener('mouseup', e => {
   if (!isDragging || !currentBall) return;
   isDragging = false; aimCtx.clearRect(0,0,W,H);
@@ -385,7 +522,6 @@ gameCanvas.addEventListener('mouseup', e => {
     (e.clientY-rect.top) *(H/rect.height));
   dragStart = null;
 });
-
 gameCanvas.addEventListener('mouseleave', () => {
   if (isDragging && currentBall) {
     isDragging = false; aimCtx.clearRect(0,0,W,H);
@@ -463,11 +599,12 @@ function draw() {
   sg.addColorStop(0,'#0f3460'); sg.addColorStop(0.7,'#16213e'); sg.addColorStop(1,'#1a1a2e');
   ctx.fillStyle = sg; ctx.fillRect(0,0,W,H);
   drawClouds(); drawGround(); drawHole(); drawSlingshot();
+  // 障害物（ブロックの後ろに描画）
+  obstacles.forEach(obs => drawObstacle(obs));
   blocks.forEach(b => { if (!b._inHole) drawBlock(b); });
   firedBalls.forEach(b => drawBall(b));
   if (currentBall && !currentBall._fired) drawBall(currentBall);
-
-  // ステージ名表示
+  // ヒント
   const stg = STAGES[currentStage];
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'left';
@@ -488,18 +625,14 @@ function drawGround() {
 }
 
 function drawHole() {
-  // 穴（右端の暗い帯）
   ctx.fillStyle = '#050505';
   ctx.fillRect(HOLE_LEFT, GROUND_Y-2, HOLE_W+4, H-GROUND_Y+4);
-  // フェード
   const hg = ctx.createLinearGradient(HOLE_LEFT, 0, HOLE_LEFT+40, 0);
   hg.addColorStop(0,'rgba(0,0,0,0.85)'); hg.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle = hg; ctx.fillRect(HOLE_LEFT, GROUND_Y, 40, H-GROUND_Y);
-  // 縁の破線
   ctx.strokeStyle='#ff6b35'; ctx.lineWidth=2.5; ctx.setLineDash([5,5]);
   ctx.beginPath(); ctx.moveTo(HOLE_LEFT,GROUND_Y+2); ctx.lineTo(HOLE_LEFT,GROUND_Y-14); ctx.stroke();
   ctx.setLineDash([]);
-  // ラベル
   ctx.fillStyle='#ff6b35'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
   ctx.fillText('▼ 穴', HOLE_LEFT+35, GROUND_Y-18);
 }
@@ -515,6 +648,33 @@ function drawSlingshot() {
     ctx.beginPath(); ctx.moveTo(sx-8,sy-15); ctx.lineTo(currentBall.position.x,currentBall.position.y); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sx+8,sy-15); ctx.lineTo(currentBall.position.x,currentBall.position.y); ctx.stroke();
   }
+}
+
+function drawObstacle(obs) {
+  const { x, y } = obs.position;
+  const w = obs._w, h = obs._h;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(obs.angle);
+  // 影
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8;
+  ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 3;
+  ctx.fillStyle = obs._color;
+  ctx.beginPath(); ctx.roundRect(-w/2, -h/2, w, h, 3); ctx.fill();
+  // ハイライト
+  ctx.shadowColor = 'transparent';
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.roundRect(-w/2, -h/2, w, h/2, [3,3,0,0]); ctx.fill();
+  // 枠
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(-w/2, -h/2, w, h, 3); ctx.stroke();
+  // ラベル（横長か縦長かで表示切り替え）
+  const isVertical = obs._h > obs._w;
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = `bold ${Math.min(Math.min(obs._w, obs._h) * 0.6, 11)}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(isVertical ? '┃' : '━', 0, 0);
+  ctx.restore();
 }
 
 function drawBlock(block) {
