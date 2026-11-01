@@ -129,34 +129,68 @@ const STAGES = [
 
       // 階段土台（穴方向へ右に行くほど低くなる）
       // 各土台の上面Y（地面からの高さ）: 左=120px, 中=70px, 右=20px
+      // 土台間隔を広げて斜面がブロックに干渉しないよう配置
       const steps = [
-        { cx: 510, topH: 120 },  // 左タワー土台
-        { cx: 590, topH:  70 },  // 中タワー土台
-        { cx: 670, topH:  20 },  // 右タワー土台（ほぼ地面）
+        { cx: 490, topH: 120 },  // 左タワー土台
+        { cx: 600, topH:  70 },  // 中タワー土台
+        { cx: 700, topH:  20 },  // 右タワー土台
       ];
+      const tw = BW + 6;  // 土台幅（ブロック幅+6px）
       steps.forEach(({ cx, topH }) => {
-        const tw = BW + 16;          // 土台幅（ブロックより少し広め）
-        const th = topH;             // 土台の厚さ = 地面からの高さ（地面まで続く柱）
         obs.push({
           x: cx,
-          y: GROUND_Y - th / 2,      // 土台の中心Y
+          y: GROUND_Y - topH / 2,
           w: tw,
-          h: th,
+          h: topH,
           color: OBS_COLOR2
         });
       });
+
+      // 段と段の間の斜面（土台の右端〜次の土台の左端の間に収める）
+      // 土台右端 = cx + tw/2 = cx + 25
+      // 次の土台左端 = next_cx - tw/2 = next_cx - 25
+      // 斜面①: 左土台右端(515) → 中土台左端(575)  水平距離60px、高さ差50px
+      // 斜面②: 中土台右端(625) → 右土台左端(675)  水平距離50px、高さ差50px
+      const half = tw / 2;  // = 25
+
+      // 斜面①（左〜中の間）
+      {
+        const x1 = steps[0].cx + half;  // 515
+        const x2 = steps[1].cx - half;  // 575
+        const y1 = GROUND_Y - steps[0].topH;  // 土台①上面
+        const y2 = GROUND_Y - steps[1].topH;  // 土台②上面
+        const cx  = (x1 + x2) / 2;            // 545
+        const cy  = (y1 + y2) / 2;            // 中間Y
+        const ang = Math.atan2(y2 - y1, x2 - x1);  // 右下がり角度
+        const len = Math.hypot(x2 - x1, y2 - y1);
+        obs.push({ x: cx, y: cy, w: len, h: 14, angle: ang, color: OBS_COLOR2 });
+      }
+
+      // 斜面②（中〜右の間）
+      {
+        const x1 = steps[1].cx + half;  // 625
+        const x2 = steps[2].cx - half;  // 675
+        const y1 = GROUND_Y - steps[1].topH;
+        const y2 = GROUND_Y - steps[2].topH;
+        const cx  = (x1 + x2) / 2;
+        const cy  = (y1 + y2) / 2;
+        const ang = Math.atan2(y2 - y1, x2 - x1);
+        const len = Math.hypot(x2 - x1, y2 - y1);
+        obs.push({ x: cx, y: cy, w: len, h: 14, angle: ang, color: OBS_COLOR2 });
+      }
+
       return obs;
     })(),
     layout: (() => {
       const list = [];
-      // 各タワーの土台上面から積み上げ
+      // 土台位置に合わせてブロックを積む（cx・topHはobstaclesと同じ値）
       const steps = [
-        { cx: 510, topH: 120 },
-        { cx: 590, topH:  70 },
-        { cx: 670, topH:  20 },
+        { cx: 490, topH: 120 },
+        { cx: 600, topH:  70 },
+        { cx: 700, topH:  20 },
       ];
       steps.forEach(({ cx, topH }) => {
-        const baseY = GROUND_Y - topH; // 土台上面のY座標
+        const baseY = GROUND_Y - topH;
         for (let row = 0; row < 6; row++) {
           list.push({
             x: cx,
@@ -369,8 +403,9 @@ function initWorld() {
     const obs = Bodies.rectangle(def.x, def.y, def.w, def.h, {
       isStatic: true,
       label: 'obstacle',
-      friction: 0.3,
-      restitution: 0.2,
+      friction: 0.15,       // 斜面でブロックが滑りやすいよう摩擦を下げる
+      restitution: 0.1,
+      angle: def.angle || 0, // 斜面用の傾き（未指定なら0）
     });
     obs._color = def.color || OBS_COLOR;
     obs._w = def.w;
