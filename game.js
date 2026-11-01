@@ -112,88 +112,40 @@ const STAGES = [
     })()
   },
 
-  // ---- Stage 4: 縦タワー3本 ＋ 階段土台 ＋ 障害物 ----
+  // ---- Stage 4: 縦台座タワー ＋ 障害物 ----
   // 【必要な打ち角度：高め（上に向けて打つ）】
-  // 各タワーを穴方向へ下っていく階段土台の上に置く。
-  // 倒れたブロックが階段を転がり穴に入りやすい。
-  // 低弾道は横板2枚で封鎖。
+  // 細長の縦板を台座として地面に立て、その上にブロックを積む。
+  // 台座ごと倒れて穴方向へ転がる。
+  // 低弾道は横板2枚で封鎖。上向きの弾道でないと届かない。
   {
     label: 'ステージ 4',
     hint:  '上に向けて高く打て！低い弾道は塞がれている！',
-    obstacles: (() => {
-      const obs = [];
-      // 低弾道を塞ぐ横板①（ブロック左側・低め）
-      obs.push({ x: 300, y: GROUND_Y - 55,  w: 150, h: 16, color: OBS_COLOR });
-      // 低弾道を塞ぐ横板②（少し右・少し高め）
-      obs.push({ x: 400, y: GROUND_Y - 105, w: 130, h: 16, color: OBS_COLOR });
+    obstacles: [
+      // ---- 低弾道封鎖の横板（ブロック左側・低め）----
+      // 横板①：地面から50px上（低弾道を完全に塞ぐ）
+      { x: 290, y: GROUND_Y - 50,  w: 160, h: 16, color: OBS_COLOR },
+      // 横板②：少し右・少し高め
+      { x: 410, y: GROUND_Y - 100, w: 130, h: 16, color: OBS_COLOR },
 
-      // 階段土台（穴方向へ右に行くほど低くなる）
-      // 各土台の上面Y（地面からの高さ）: 左=120px, 中=70px, 右=20px
-      // 土台間隔を広げて斜面がブロックに干渉しないよう配置
-      const steps = [
-        { cx: 490, topH: 120 },  // 左タワー土台
-        { cx: 600, topH:  70 },  // 中タワー土台
-        { cx: 700, topH:  20 },  // 右タワー土台
-      ];
-      const tw = BW + 6;  // 土台幅（ブロック幅+6px）
-      steps.forEach(({ cx, topH }) => {
-        obs.push({
-          x: cx,
-          y: GROUND_Y - topH / 2,
-          w: tw,
-          h: topH,
-          color: OBS_COLOR2
-        });
-      });
-
-      // 段と段の間の斜面（土台の右端〜次の土台の左端の間に収める）
-      // 土台右端 = cx + tw/2 = cx + 25
-      // 次の土台左端 = next_cx - tw/2 = next_cx - 25
-      // 斜面①: 左土台右端(515) → 中土台左端(575)  水平距離60px、高さ差50px
-      // 斜面②: 中土台右端(625) → 右土台左端(675)  水平距離50px、高さ差50px
-      const half = tw / 2;  // = 25
-
-      // 斜面①（左〜中の間）
-      {
-        const x1 = steps[0].cx + half;  // 515
-        const x2 = steps[1].cx - half;  // 575
-        const y1 = GROUND_Y - steps[0].topH;  // 土台①上面
-        const y2 = GROUND_Y - steps[1].topH;  // 土台②上面
-        const cx  = (x1 + x2) / 2;            // 545
-        const cy  = (y1 + y2) / 2;            // 中間Y
-        const ang = Math.atan2(y2 - y1, x2 - x1);  // 右下がり角度
-        const len = Math.hypot(x2 - x1, y2 - y1);
-        obs.push({ x: cx, y: cy, w: len, h: 14, angle: ang, color: OBS_COLOR2 });
-      }
-
-      // 斜面②（中〜右の間）
-      {
-        const x1 = steps[1].cx + half;  // 625
-        const x2 = steps[2].cx - half;  // 675
-        const y1 = GROUND_Y - steps[1].topH;
-        const y2 = GROUND_Y - steps[2].topH;
-        const cx  = (x1 + x2) / 2;
-        const cy  = (y1 + y2) / 2;
-        const ang = Math.atan2(y2 - y1, x2 - x1);
-        const len = Math.hypot(x2 - x1, y2 - y1);
-        obs.push({ x: cx, y: cy, w: len, h: 14, angle: ang, color: OBS_COLOR2 });
-      }
-
-      return obs;
-    })(),
+      // ---- 縦長の台座（細長障害物を台座として使用）----
+      // 台座は地面から高さ70pxの縦板。ブロックがその上に乗る。
+      // ボールが当たると台座ごと穴方向へ倒れやすい。
+      { x: 530, y: GROUND_Y - 35,  w: 16, h: 70, color: OBS_COLOR2 },
+      { x: 590, y: GROUND_Y - 35,  w: 16, h: 70, color: OBS_COLOR2 },
+      { x: 650, y: GROUND_Y - 35,  w: 16, h: 70, color: OBS_COLOR2 },
+      { x: 710, y: GROUND_Y - 35,  w: 16, h: 70, color: OBS_COLOR2 },
+    ],
     layout: (() => {
       const list = [];
-      // 土台位置に合わせてブロックを積む（cx・topHはobstaclesと同じ値）
-      const steps = [
-        { cx: 490, topH: 120 },
-        { cx: 600, topH:  70 },
-        { cx: 700, topH:  20 },
-      ];
-      steps.forEach(({ cx, topH }) => {
-        const baseY = GROUND_Y - topH;
-        for (let row = 0; row < 6; row++) {
+      // 台座上面 y = GROUND_Y - 70
+      // 各台座の中心xの上にブロックを3段積む
+      const towerX  = [530, 590, 650, 710];
+      const baseY   = GROUND_Y - 70;  // 台座上面
+
+      towerX.forEach(tx => {
+        for (let row = 0; row < 5; row++) {
           list.push({
-            x: cx,
+            x: tx,
             y: baseY - BH/2 - row*(BH+2)
           });
         }
