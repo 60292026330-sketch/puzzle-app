@@ -161,13 +161,19 @@ const STAGES = [
       { x: 300, y: GROUND_Y - 65,  w: 130, h: 16, color: OBS_COLOR  },
       // 低弾道を塞ぐ縦板（低め・右側）
       { x: 420, y: GROUND_Y - 65,  w: 16,  h: 60, color: OBS_COLOR  },
-      // 縦板の右側に右下がり斜面（縦板右端428から地面方向へ）
-      // 縦板右端(428+8=436), 高さ=地面-65+30=地面-35 → 右端を地面-10付近に
-      // 右端x=500、y=地面-10  → cx=(436+500)/2=468, cy=(GROUND_Y-35+GROUND_Y-10)/2=GROUND_Y-22.5
+      // 縦板の右側に右下がり斜面①（縦板右端428 → x=500, 地面付近）
       {
         x: 468, y: GROUND_Y - 23,
-        w: Math.hypot(500-436, 25), h: 12,
+        w: Math.hypot(64, 25), h: 12,
         angle: Math.atan2(25, 64),
+        color: OBS_COLOR
+      },
+      // 縦板の左側・地面付近の引っかかりを防ぐ斜面②
+      // 赤ブロックが溜まるx≈400〜460, y≈地面-30付近 → 右下がり斜面で穴へ誘導
+      {
+        x: 430, y: GROUND_Y - 18,
+        w: Math.hypot(80, 20), h: 12,
+        angle: Math.atan2(20, 80),
         color: OBS_COLOR
       },
       // 高弾道を塞ぐ横板（高め・左側）
@@ -179,30 +185,24 @@ const STAGES = [
       // ブロックの土台となる横板②（中タワー下）
       { x: 602, y: GROUND_Y - 50,  w: 96,  h: 16, color: OBS_COLOR2 },
       // 土台右端(650)から穴(800)への右下がり斜面
-      // 土台右端x=650, y=地面-50（土台上面）
-      // 穴手前x=790, y=地面-5
-      // ブロックが乗る土台上面(GROUND_Y-50-8=GROUND_Y-58)より下に設置
-      // 斜面上端y=GROUND_Y-42（土台上面より低いのでブロック非干渉）
       {
         x: (650 + 790) / 2,
         y: GROUND_Y - 23,
-        w: Math.hypot(790 - 650, 37), h: 12,
+        w: Math.hypot(140, 37), h: 12,
         angle: Math.atan2(37, 140),
         color: OBS_COLOR2
       },
     ],
     layout: (() => {
       const list = [];
-      // 右列（tx=680）を削除し、左2タワー（tx=480, 580）のみ
+      // col=1（右列）を削除し、各タワーを1列のみに変更
       const baseY = GROUND_Y - 50 - 8;
       [480, 580].forEach(tx => {
         for (let row = 0; row < 6; row++) {
-          for (let col = 0; col < 2; col++) {
-            list.push({
-              x: tx + col * (BW + 2) + BW / 2,
-              y: baseY - BH/2 - row*(BH+2)
-            });
-          }
+          list.push({
+            x: tx + BW / 2,   // col=0 の中心X のみ
+            y: baseY - BH/2 - row*(BH+2)
+          });
         }
       });
       return list;
