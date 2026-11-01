@@ -126,8 +126,8 @@ const STAGES = [
       { x: 290, y: GROUND_Y - 50,  w: 160, h: 16, color: OBS_COLOR },
       // 低弾道封鎖の横板②（少し右・少し高め）
       { x: 410, y: GROUND_Y - 100, w: 130, h: 16, color: OBS_COLOR },
-      // ブロックの土台となる横長板（地面から60px上・穴のすぐ左）
-      { x: 620, y: GROUND_Y - 60,  w: 240, h: 16, color: OBS_COLOR2 },
+      // ブロックの土台となる横長板（地面から130px上・穴のすぐ左）
+      { x: 620, y: GROUND_Y - 130, w: 240, h: 16, color: OBS_COLOR2 },
     ],
     layout: (() => {
       const list = [];
@@ -135,7 +135,7 @@ const STAGES = [
       // 土台の上にブロックを2列×5段（合計10個）
       // 土台中心x=620、土台幅240なので左端x=500・右端x=740
       // 2列の中心: x=580, x=660（穴左端800の手前）
-      const baseY = GROUND_Y - 60 - 8;  // 土台上面
+      const baseY = GROUND_Y - 130 - 8;  // 土台上面
       [580, 640, 700].forEach(tx => {
         for (let row = 0; row < 5; row++) {
           list.push({
