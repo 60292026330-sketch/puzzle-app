@@ -112,87 +112,10 @@ const STAGES = [
     })()
   },
 
-  // ---- Stage 4: 縦台座タワー ＋ 障害物 ----
-  // ---- Stage 4: 横長土台の上にブロック ＋ 障害物 ----
-  // 【必要な打ち角度：高め（上に向けて打つ）】
-  // 1枚の横長土台（横板）の上にブロックを並べる。
-  // 台座間にブロックが挟まる問題なし。
-  // 低弾道は横板2枚で封鎖。上向きの弾道でないと届かない。
+  // ---- Stage 4: 最終決戦（旧6） ＋ 障害物 ----
+  // 【必要な打ち角度：低め（水平に近く打つ）】
   {
     label: 'ステージ 4',
-    hint:  '上に向けて高く打て！低い弾道は塞がれている！',
-    obstacles: [
-      // 低弾道封鎖の横板①（地面から80px上）
-      { x: 290, y: GROUND_Y - 80,  w: 160, h: 16, color: OBS_COLOR },
-      // 低弾道封鎖の横板②（少し右・少し高め）
-      { x: 410, y: GROUND_Y - 100, w: 130, h: 16, color: OBS_COLOR },
-      // ブロックの土台となる横長板（地面から130px上・穴のすぐ左）
-      { x: 620, y: GROUND_Y - 130, w: 240, h: 16, color: OBS_COLOR2 },
-    ],
-    layout: (() => {
-      const list = [];
-      // 土台上面 y = GROUND_Y - 60 - 8 = GROUND_Y - 68
-      // 土台の上にブロックを2列×5段（合計10個）
-      // 土台中心x=620、土台幅240なので左端x=500・右端x=740
-      // 2列の中心: x=580, x=660（穴左端800の手前）
-      const baseY = GROUND_Y - 130 - 8;  // 土台上面
-      [580, 640, 700].forEach(tx => {
-        for (let row = 0; row < 5; row++) {
-          list.push({
-            x: tx,
-            y: baseY - BH/2 - row*(BH+2)
-          });
-        }
-      });
-      return list;
-    })()
-  },
-
-  // ---- Stage 5: 安定3タワー ＋ 障害物（横板を土台にしてブロックを積む）----
-  // 【必要な打ち角度：中程度（斜め45°前後）】
-  // 低弾道横板・高弾道横板は空中に浮かせたまま。
-  // さらにブロック群を「地面より高い土台（横板）の上」に乗せ、
-  // 低弾道ではブロック下の土台に弾かれてブロックに届かない。
-  {
-    label: 'ステージ 5',
-    hint:  '中くらいの角度で狙え！上も下も塞がれている！',
-    obstacles: [
-      // 低弾道を塞ぐ横板（低め・左側）
-      { x: 300, y: GROUND_Y - 65,  w: 130, h: 16, color: OBS_COLOR  },
-      // 低弾道を塞ぐ縦板（低め・右側）
-      { x: 420, y: GROUND_Y - 90,  w: 16,  h: 60, color: OBS_COLOR  },
-      // 高弾道を塞ぐ横板（高め・左側）
-      { x: 290, y: GROUND_Y - 310, w: 130, h: 16, color: OBS_COLOR2 },
-      // 高弾道を塞ぐ縦板（高め・右側）
-      { x: 415, y: GROUND_Y - 280, w: 16,  h: 60, color: OBS_COLOR2 },
-      // ブロックの土台（2列分まとめて1枚の横板）
-      { x: 580, y: GROUND_Y - 50,  w: 110, h: 16, color: OBS_COLOR2 },
-    ],
-    layout: (() => {
-      const list = [];
-      const baseY = GROUND_Y - 50 - 8;  // 土台上面
-      // 右列の中心X（土台中心580, 幅110 → 右列: 580+27=607, 左列: 607-(BW+2)=561）
-      // 2列を隙間なく隣り合わせ: 右列 cx=607, 左列 cx=607-(BW+2)=561
-      const rightX = 607;
-      const leftX  = rightX - (BW + 2);  // = 561
-      [leftX, rightX].forEach(tx => {
-        for (let row = 0; row < 6; row++) {
-          list.push({
-            x: tx,
-            y: baseY - BH/2 - row*(BH+2)
-          });
-        }
-      });
-      return list;
-    })()
-  },
-
-  // ---- Stage 6: 最終決戦 ＋ 障害物 ----
-  // 【必要な打ち角度：低め（水平に近く打つ）】
-  // 中段・高段の弾道をしっかり塞ぎ、地面すれすれの低い弾道だけ通れる隙間を残す。
-  // ただし低すぎると地面に当たるため、絶妙な角度が必要。
-  {
-    label: 'ステージ 6',
     hint:  '水平に近い低い角度で狙え！上は全部塞がれている！',
     obstacles: [
       // 中段を塞ぐ横板（左側・中高め）
@@ -240,6 +163,68 @@ const STAGES = [
           y: GROUND_Y - BH/2 - row*(BH+2)
         });
       }
+      return list;
+    })()
+  },
+
+  // ---- Stage 5: 横長土台の上にブロック（旧4）＋ 障害物 ----
+  // 【必要な打ち角度：高め（上に向けて打つ）】
+  {
+    label: 'ステージ 5',
+    hint:  '上に向けて高く打て！低い弾道は塞がれている！',
+    obstacles: [
+      // 低弾道封鎖の横板①（地面から80px上）
+      { x: 290, y: GROUND_Y - 80,  w: 160, h: 16, color: OBS_COLOR },
+      // 低弾道封鎖の横板②（少し右・少し高め）
+      { x: 410, y: GROUND_Y - 100, w: 130, h: 16, color: OBS_COLOR },
+      // ブロックの土台となる横長板（地面から130px上・穴のすぐ左）
+      { x: 620, y: GROUND_Y - 130, w: 240, h: 16, color: OBS_COLOR2 },
+    ],
+    layout: (() => {
+      const list = [];
+      const baseY = GROUND_Y - 130 - 8;  // 土台上面
+      [580, 640, 700].forEach(tx => {
+        for (let row = 0; row < 5; row++) {
+          list.push({
+            x: tx,
+            y: baseY - BH/2 - row*(BH+2)
+          });
+        }
+      });
+      return list;
+    })()
+  },
+
+  // ---- Stage 6: 中角度タワー（旧5）＋ 障害物 ----
+  // 【必要な打ち角度：中程度（斜め45°前後）】
+  {
+    label: 'ステージ 6',
+    hint:  '中くらいの角度で狙え！上も下も塞がれている！',
+    obstacles: [
+      // 低弾道を塞ぐ横板（低め・左側）
+      { x: 300, y: GROUND_Y - 65,  w: 130, h: 16, color: OBS_COLOR  },
+      // 低弾道を塞ぐ縦板（低め・右側）
+      { x: 420, y: GROUND_Y - 90,  w: 16,  h: 60, color: OBS_COLOR  },
+      // 高弾道を塞ぐ横板（高め・左側）
+      { x: 290, y: GROUND_Y - 310, w: 130, h: 16, color: OBS_COLOR2 },
+      // 高弾道を塞ぐ縦板（高め・右側）
+      { x: 415, y: GROUND_Y - 280, w: 16,  h: 60, color: OBS_COLOR2 },
+      // ブロックの土台（2列分まとめて1枚の横板）
+      { x: 580, y: GROUND_Y - 50,  w: 110, h: 16, color: OBS_COLOR2 },
+    ],
+    layout: (() => {
+      const list = [];
+      const baseY = GROUND_Y - 50 - 8;  // 土台上面
+      const rightX = 607;
+      const leftX  = rightX - (BW + 2);  // = 561
+      [leftX, rightX].forEach(tx => {
+        for (let row = 0; row < 6; row++) {
+          list.push({
+            x: tx,
+            y: baseY - BH/2 - row*(BH+2)
+          });
+        }
+      });
       return list;
     })()
   }
