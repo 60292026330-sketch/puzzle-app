@@ -161,46 +161,24 @@ const STAGES = [
       { x: 300, y: GROUND_Y - 65,  w: 130, h: 16, color: OBS_COLOR  },
       // 低弾道を塞ぐ縦板（低め・右側）
       { x: 420, y: GROUND_Y - 65,  w: 16,  h: 60, color: OBS_COLOR  },
-      // 縦板の右側に右下がり斜面①（縦板右端428 → x=500, 地面付近）
-      {
-        x: 468, y: GROUND_Y - 23,
-        w: Math.hypot(64, 25), h: 12,
-        angle: Math.atan2(25, 64),
-        color: OBS_COLOR
-      },
-      // 縦板の左側・地面付近の引っかかりを防ぐ斜面②
-      // 赤ブロックが溜まるx≈400〜460, y≈地面-30付近 → 右下がり斜面で穴へ誘導
-      {
-        x: 430, y: GROUND_Y - 18,
-        w: Math.hypot(80, 20), h: 12,
-        angle: Math.atan2(20, 80),
-        color: OBS_COLOR
-      },
       // 高弾道を塞ぐ横板（高め・左側）
       { x: 290, y: GROUND_Y - 310, w: 130, h: 16, color: OBS_COLOR2 },
       // 高弾道を塞ぐ縦板（高め・右側）
       { x: 415, y: GROUND_Y - 280, w: 16,  h: 60, color: OBS_COLOR2 },
-      // ブロックの土台となる横板①（左タワー下）
-      { x: 502, y: GROUND_Y - 50,  w: 96,  h: 16, color: OBS_COLOR2 },
-      // ブロックの土台となる横板②（中タワー下）
-      { x: 602, y: GROUND_Y - 50,  w: 96,  h: 16, color: OBS_COLOR2 },
-      // 土台右端(650)から穴(800)への右下がり斜面
-      {
-        x: (650 + 790) / 2,
-        y: GROUND_Y - 23,
-        w: Math.hypot(140, 37), h: 12,
-        angle: Math.atan2(37, 140),
-        color: OBS_COLOR2
-      },
+      // ブロックの土台（2列分まとめて1枚の横板）
+      { x: 580, y: GROUND_Y - 50,  w: 110, h: 16, color: OBS_COLOR2 },
     ],
     layout: (() => {
       const list = [];
-      // col=1（右列）を削除し、各タワーを1列のみに変更
-      const baseY = GROUND_Y - 50 - 8;
-      [480, 580].forEach(tx => {
+      const baseY = GROUND_Y - 50 - 8;  // 土台上面
+      // 右列の中心X（土台中心580, 幅110 → 右列: 580+27=607, 左列: 607-(BW+2)=561）
+      // 2列を隙間なく隣り合わせ: 右列 cx=607, 左列 cx=607-(BW+2)=561
+      const rightX = 607;
+      const leftX  = rightX - (BW + 2);  // = 561
+      [leftX, rightX].forEach(tx => {
         for (let row = 0; row < 6; row++) {
           list.push({
-            x: tx + BW / 2,   // col=0 の中心X のみ
+            x: tx,
             y: baseY - BH/2 - row*(BH+2)
           });
         }
