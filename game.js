@@ -122,8 +122,8 @@ const STAGES = [
     label: 'ステージ 4',
     hint:  '上に向けて高く打て！低い弾道は塞がれている！',
     obstacles: [
-      // 低弾道封鎖の横板①（地面から50px上）
-      { x: 290, y: GROUND_Y - 50,  w: 160, h: 16, color: OBS_COLOR },
+      // 低弾道封鎖の横板①（地面から80px上）
+      { x: 290, y: GROUND_Y - 80,  w: 160, h: 16, color: OBS_COLOR },
       // 低弾道封鎖の横板②（少し右・少し高め）
       { x: 410, y: GROUND_Y - 100, w: 130, h: 16, color: OBS_COLOR },
       // ブロックの土台となる横長板（地面から130px上・穴のすぐ左）
@@ -160,7 +160,7 @@ const STAGES = [
       // 低弾道を塞ぐ横板（低め・左側）
       { x: 300, y: GROUND_Y - 65,  w: 130, h: 16, color: OBS_COLOR  },
       // 低弾道を塞ぐ縦板（低め・右側）
-      { x: 420, y: GROUND_Y - 65,  w: 16,  h: 60, color: OBS_COLOR  },
+      { x: 420, y: GROUND_Y - 90,  w: 16,  h: 60, color: OBS_COLOR  },
       // 高弾道を塞ぐ横板（高め・左側）
       { x: 290, y: GROUND_Y - 310, w: 130, h: 16, color: OBS_COLOR2 },
       // 高弾道を塞ぐ縦板（高め・右側）
